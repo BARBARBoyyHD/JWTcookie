@@ -1,12 +1,14 @@
-
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 axios.defaults.withCredentials = true;
 function Home() {
+  const navigate = useNavigate();
   const createCookie = () => {
     axios.get("http://localhost:5000", { withCredentials: true })
     .then((res)=>{
       console.log(res.data);
+      navigate("/Dashboard");
     });
   };
 
@@ -38,7 +40,7 @@ function Home() {
           }}
           onClick={createCookie}
         >
-          Create Cookies
+          Login
         </button>
         <button
           style={{

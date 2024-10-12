@@ -63,7 +63,7 @@ app.get("/dashboard", authenticateUser, (req, res) => {
   });
   
 app.get("/getAllData",authenticateUser,(req,res)=>{
-    res.json({
+    res.send({
         name:"uwi",
         age:21
     })
