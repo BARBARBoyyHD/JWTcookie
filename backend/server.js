@@ -5,6 +5,7 @@ const cors = require("cors");
 const jwt = require("jsonwebtoken");
 const app = express();
 const authenticateUser = require("./middleware/authenticateUser");
+const refreshTokenAuth = require("./middleware/refreshTokenAuth");
 
 // Token generation functions
 const generateAccessToken = () => {
@@ -28,6 +29,7 @@ app.use(
 );
 app.use(express.json());
 app.use(cookieParser());
+app.set("trust proxy", true);
 
 const port = 5000;
 
@@ -38,12 +40,17 @@ app.get("/", (req, res) => {
 
   res
     .status(202)
-    .cookie("accessToken", accessToken, { httpOnly: true ,expiresIn: "5s",secure: true,sameSite:"strict"}) 
+    .cookie("accessToken", accessToken, {
+      httpOnly: true,
+      expiresIn: "5s",
+      secure: true,
+      sameSite: "strict",
+    })
     .cookie("refreshToken", refreshToken, {
       httpOnly: true,
       expiresIn: "1d",
       secure: true,
-      sameSite:"strict"
+      sameSite: "strict",
     })
     .send("Tokens generated and stored in cookies");
 });
@@ -58,40 +65,62 @@ app.get("/deleteCookie", (req, res) => {
 });
 
 app.get("/dashboard", authenticateUser, (req, res) => {
-    // Only users with valid access tokens can access this route
-    res.send(`Hello ${req.user.user}, welcome to your dashboard!`);
-  });
-  
-app.get("/getAllData",authenticateUser,(req,res)=>{
-    res.send({
-        name:"uwi",
-        age:21
-    })
-})
-  
+  // Only users with valid access tokens can access this route
+  res.send(`Hello ${req.user.user}, welcome to your dashboard!`);
+});
+
+app.get("/getAllData", authenticateUser, (req, res) => {
+  res.send([
+    {
+      id: 1,
+      name: "uwi",
+      age: 21,
+    },
+    {
+      id: 2,
+      name: "Nahrul",
+      age: 21,
+    },
+    {
+      id: 3,
+      name: "Muhammad",
+      age: 21,
+    },
+  ]);
+});
+
 app.post("/refresh", (req, res) => {
-    const refreshToken = req.cookies.refreshToken;
-  
-    if (!refreshToken) {
-      return res.status(401).send("Access Denied: No Refresh Token Provided");
-    }
-  
-    try {
-      // Verify the refresh token
-      const verified = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
-  
-      // Generate a new access token
-      const newAccessToken = jwt.sign({ user: verified.user }, process.env.ACCES_TOKEN_SECRET, { expiresIn: "15s" });
-  
-      // Send the new access token in an HttpOnly cookie
-      res
-        .cookie("accessToken", newAccessToken, { httpOnly: true, secure: true })
-        .send("New access token issued");
-    } catch (err) {
-      return res.status(403).send("Invalid Refresh Token");
-    }
-  });
-  
+  const refreshToken = req.cookies.refreshToken;
+
+  if (!refreshToken) {
+    return res.status(401).send("Access Denied: No Refresh Token Provided");
+  }
+
+  try {
+    // Verify the refresh token
+    const verified = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+
+    // Generate a new access token
+    const newAccessToken = jwt.sign(
+      { user: verified.user },
+      process.env.ACCES_TOKEN_SECRET,
+      { expiresIn: "15s" }
+    );
+
+    // Send the new access token in an HttpOnly cookie
+    res
+      .cookie("accessToken", newAccessToken, { httpOnly: true, secure: true })
+      .send("New access token issued");
+  } catch (err) {
+    return res.status(403).send("Invalid Refresh Token");
+  }
+});
+
+app.get("*", (req, res) => {
+  const attackerIp = req.ip;
+  res.status(404).send(`You have gone too far. Your IP address: ${attackerIp}`);
+});
+
 
 // Server listening
 app.listen(port, () => {
